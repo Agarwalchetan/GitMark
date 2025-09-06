@@ -8,8 +8,10 @@ const router = express.Router();
 router.get('/list', requireAuth, async (req, res) => {
   try {
     const { page = 1, per_page = 30, type = 'all' } = req.query;
-    const repositories = await GitHubService.getUserRepositories(
-      req.session.githubToken,
+    
+    // Since we don't store GitHub tokens, fetch public repositories for the authenticated user
+    const repositories = await GitHubService.getUserPublicRepositories(
+      req.user.login,
       { page: parseInt(page), per_page: parseInt(per_page), type }
     );
     

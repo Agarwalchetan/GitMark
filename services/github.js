@@ -75,6 +75,38 @@ export class GitHubService {
     
     return response.json();
   }
+
+  static async getUserPublicRepositories(username, options = {}) {
+    const { page = 1, per_page = 30, type = 'all' } = options;
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: per_page.toString(),
+      type: 'public',
+      sort: 'updated'
+    });
+    
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'GitMark-App'
+    };
+
+    if (process.env.GITHUB_TOKEN) {
+      headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+    }
+    
+    const response = await fetch(`https://api.github.com/users/${username}/repos?${params}`, {
+      headers
+    });
+    
+    if (!response.ok) {
+      const error = new Error('Failed to fetch user repositories');
+      error.status = response.status;
+      throw error;
+    }
+    
+    return response.json();
+  }
   
   static async getRepositoryDetails(token, owner, repo) {
     const headers = {
