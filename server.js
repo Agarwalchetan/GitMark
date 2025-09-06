@@ -68,12 +68,12 @@ app.get('/api/health', (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static('dist'));
   
-  // Catch all handler for SPA
-  app.get('/*', (req, res) => {
-    if (!req.path.startsWith('/api/')) {
-      res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
-    }
-  });
+  // Catch all handler for SPA (works with Express 5)
+app.get(/.*/, (req, res) => {
+  if (!req.path.startsWith('/api/')) {
+    res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+  }
+});
 }
 
 // Error handling middleware
