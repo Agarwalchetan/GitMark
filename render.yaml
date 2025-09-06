@@ -4,6 +4,7 @@ services:
     env: node
     buildCommand: npm install && npm run build
     startCommand: npm start
+    plan: starter
     envVars:
       - key: NODE_ENV
         value: production
