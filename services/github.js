@@ -4,7 +4,7 @@ export class GitHubService {
   static getAuthorizationUrl(state) {
     const params = new URLSearchParams({
       client_id: process.env.GITHUB_CLIENT_ID,
-      redirect_uri: `http://localhost:3001/api/auth/github/callback`,
+      redirect_uri: `${process.env.BACKEND_URL}/api/auth/github/callback`,
       scope: 'repo,user:email',
       state: state
     });

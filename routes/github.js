@@ -11,15 +11,19 @@ router.get('/project-stats', async (req, res) => {
       return res.status(500).json({ error: 'Repository not configured' });
     }
 
-    const response = await fetch(`https://api.github.com/repos/${repoPath}`, {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'GitMark-App'
-      }
-    });
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'GitMark-App'
+    };
+
+    if (process.env.GITHUB_TOKEN) {
+      headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+    }
+
+    const response = await fetch(`https://api.github.com/repos/${repoPath}`, { headers });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch repository stats');
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
