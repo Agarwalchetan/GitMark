@@ -47,11 +47,20 @@ router.get('/github/callback', async (req, res) => {
       id: userInfo.id,
       login: userInfo.login,
       name: userInfo.name,
-      avatar_url: userInfo.avatar_url
+      avatar_url: userInfo.avatar_url,
+      email: userInfo.email,
+      created_at: new Date().toISOString()
     };
     
     // Store token securely in session
     req.session.githubToken = tokenData.access_token;
+    
+    // Save session explicitly
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+      }
+    });
     
     // Clean up OAuth state
     delete req.session.oauthState;
@@ -81,7 +90,12 @@ router.post('/logout', (req, res) => {
       return res.status(500).json({ error: 'Logout failed' });
     }
     
-    res.clearCookie('connect.sid');
+    // Clear the custom session cookie
+    res.clearCookie('gitmark.sid', {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    });
     res.json({ message: 'Logged out successfully' });
   });
 });
