@@ -4,12 +4,11 @@ services:
     env: node
     buildCommand: npm install && npm run build
     startCommand: npm start
-    plan: starter
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 3001
       - key: GITHUB_CLIENT_ID
         sync: false
       - key: GITHUB_CLIENT_SECRET
@@ -25,4 +24,4 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://gitmark-readme-generator.onrender.com
+        value: https://gitmark.onrender.com
