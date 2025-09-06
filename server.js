@@ -18,8 +18,22 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Security middleware
-app.use(helmet());
+// Security middleware with relaxed CSP for production
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "blob:", "data:"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "https://api.github.com"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+}));
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
@@ -41,17 +55,17 @@ app.use(cookieParser(process.env.SESSION_SECRET || 'fallback-secret-key'));
 // Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret-key',
-  resave: false,
-  saveUninitialized: true, // Changed to true for OAuth flow
+  resave: true, // Changed to true for production reliability
+  saveUninitialized: true,
   name: 'gitmark.sid',
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours (shorter for OAuth)
-    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax', // Changed from 'none' to 'lax'
-    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Set domain for production
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax', // Use lax for both environments
+    // Remove domain setting as it can cause issues
   },
-  rolling: false // Disable rolling for OAuth state persistence
+  rolling: true // Re-enable rolling to extend session on activity
 }));
 
 // Routes

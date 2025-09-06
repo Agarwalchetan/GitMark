@@ -105,19 +105,21 @@ router.get('/github/callback', async (req, res) => {
     // Store token securely in session
     req.session.githubToken = tokenData.access_token;
     
-    // Save session explicitly
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error:', err);
-      }
-    });
-    
     // Clean up OAuth state
     delete req.session.oauthState;
     
-    // Redirect back to frontend with success parameter
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${frontendUrl}?auth=success`);
+    // Save session explicitly and wait for completion before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=session_failed`);
+      }
+      
+      // Only redirect after session is successfully saved
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      console.log('Session saved successfully, redirecting to:', `${frontendUrl}?auth=success`);
+      res.redirect(`${frontendUrl}?auth=success`);
+    });
   } catch (error) {
     console.error('GitHub OAuth callback error:', error.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=auth_failed`);
