@@ -8,14 +8,33 @@ export const CallbackHandler: React.FC = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        // Check for error in URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        
+        if (error) {
+          console.error('OAuth error:', error);
+          // Redirect to home with error
+          window.location.href = '/?error=' + error;
+          return;
+        }
+
         // Wait a moment for the server to process the callback
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Check auth status
         await checkAuthStatus();
         
-        // Clean up URL
+        // Clean up URL and redirect to main app
         window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Force a page reload to ensure the auth context updates properly
+        window.location.href = '/';
+        
       } catch (error) {
         console.error('OAuth callback error:', error);
+        // Redirect to home with error
+        window.location.href = '/?error=callback_failed';
       }
     };
 

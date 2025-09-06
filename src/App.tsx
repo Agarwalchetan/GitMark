@@ -16,8 +16,8 @@ function AppContent() {
   const [currentStep, setCurrentStep] = useState('auth');
   
   
-  // Check if this is an OAuth callback
-  const isCallback = window.location.search.includes('code=') || window.location.search.includes('error=');
+  // Check if this is an OAuth callback or auth success
+  const isCallback = window.location.search.includes('code=') || window.location.search.includes('error=') || window.location.search.includes('auth=success');
 
   if (isCallback) {
     return <CallbackHandler />;

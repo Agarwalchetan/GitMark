@@ -115,8 +115,9 @@ router.get('/github/callback', async (req, res) => {
     // Clean up OAuth state
     delete req.session.oauthState;
     
-    // Redirect back to frontend
-    res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173');
+    // Redirect back to frontend with success parameter
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}?auth=success`);
   } catch (error) {
     console.error('GitHub OAuth callback error:', error.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=auth_failed`);
