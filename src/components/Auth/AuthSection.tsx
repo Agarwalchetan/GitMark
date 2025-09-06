@@ -1,10 +1,65 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Github, Shield, Zap, FileText, Globe, Lock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { repositoryService } from '../../services/repositoryService';
 
-export const AuthSection: React.FC = () => {
+interface AuthSectionProps {
+  onRepositorySelect?: (repository: any) => void;
+}
+
+export const AuthSection: React.FC<AuthSectionProps> = ({ onRepositorySelect }) => {
   const { login, loading } = useAuth();
   const [repoType, setRepoType] = useState<'public' | 'private'>('public');
+  const [repoUrl, setRepoUrl] = useState('');
+  const [isLoadingRepo, setIsLoadingRepo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const parseGitHubUrl = (url: string): { owner: string; repo: string } | null => {
+    const cleanUrl = url.trim().replace(/\/$/, '');
+    const patterns = [
+      /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)$/,
+      /^github\.com\/([^\/]+)\/([^\/]+)$/,
+      /^([^\/]+)\/([^\/]+)$/
+    ];
+
+    for (const pattern of patterns) {
+      const match = cleanUrl.match(pattern);
+      if (match) {
+        return { owner: match[1], repo: match[2] };
+      }
+    }
+    return null;
+  };
+
+  const handlePublicRepoSubmit = async () => {
+    if (!repoUrl.trim()) {
+      setError('Please enter a repository URL');
+      return;
+    }
+
+    const parsed = parseGitHubUrl(repoUrl);
+    if (!parsed) {
+      setError('Invalid GitHub repository URL. Use format: github.com/owner/repo or owner/repo');
+      return;
+    }
+
+    try {
+      setIsLoadingRepo(true);
+      setError(null);
+      
+      const repository = await repositoryService.getPublicRepositoryDetails(parsed.owner, parsed.repo);
+      
+      if (onRepositorySelect) {
+        onRepositorySelect(repository);
+      } else {
+        setError('Repository selection handler not available');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch repository');
+    } finally {
+      setIsLoadingRepo(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -105,11 +160,36 @@ export const AuthSection: React.FC = () => {
           <div className="max-w-md mx-auto">
             <input
               type="text"
+              value={repoUrl}
+              onChange={(e) => setRepoUrl(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handlePublicRepoSubmit();
+                }
+              }}
               placeholder="https://github.com/username/repository"
               className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
             />
-            <button className="w-full px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-              Generate README
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
+              </div>
+            )}
+            <button 
+              type="button"
+              onClick={handlePublicRepoSubmit}
+              disabled={isLoadingRepo || !repoUrl.trim()}
+              className="w-full px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
+            >
+              {isLoadingRepo ? (
+                <>
+                  <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                  <span>Loading Repository...</span>
+                </>
+              ) : (
+                <span>Generate README</span>
+              )}
             </button>
           </div>
         )}

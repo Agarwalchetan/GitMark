@@ -68,4 +68,55 @@ router.get('/:owner/:repo/structure', requireAuth, async (req, res) => {
   }
 });
 
+// PUBLIC REPOSITORY ROUTES (no authentication required)
+
+// Get public repository details
+router.get('/public/:owner/:repo', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const repository = await GitHubService.getPublicRepositoryDetails(owner, repo);
+    
+    res.json(repository);
+  } catch (error) {
+    console.error('Public repository details error:', error.message);
+    
+    if (error.status === 404) {
+      return res.status(404).json({ error: 'Repository not found or is private' });
+    }
+    
+    res.status(500).json({ error: 'Failed to fetch repository details' });
+  }
+});
+
+// Get public repository structure
+router.get('/public/:owner/:repo/structure', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const structure = await GitHubService.getPublicRepositoryStructure(owner, repo);
+    
+    res.json(structure);
+  } catch (error) {
+    console.error('Public repository structure error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch repository structure' });
+  }
+});
+
+// Get complete public repository data for README generation
+router.get('/public/:owner/:repo/data', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const repositoryData = await GitHubService.gatherPublicRepositoryData(owner, repo);
+    
+    res.json(repositoryData);
+  } catch (error) {
+    console.error('Public repository data error:', error.message);
+    
+    if (error.status === 404) {
+      return res.status(404).json({ error: 'Repository not found or is private' });
+    }
+    
+    res.status(500).json({ error: 'Failed to fetch repository data' });
+  }
+});
+
 export default router;

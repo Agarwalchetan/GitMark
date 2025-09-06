@@ -15,6 +15,7 @@ function AppContent() {
   const [selectedRepository, setSelectedRepository] = useState(null);
   const [currentStep, setCurrentStep] = useState('auth');
   
+  
   // Check if this is an OAuth callback
   const isCallback = window.location.search.includes('code=') || window.location.search.includes('error=');
 
@@ -25,7 +26,7 @@ function AppContent() {
   useEffect(() => {
     if (user && currentStep === 'auth') {
       setCurrentStep('repository');
-    } else if (!user && currentStep !== 'auth') {
+    } else if (!user && currentStep === 'repository') {
       setCurrentStep('auth');
       setSelectedRepository(null);
     }
@@ -46,8 +47,9 @@ function AppContent() {
 
   const handleBackToRepos = () => {
     setSelectedRepository(null);
-    setCurrentStep('repository');
+    setCurrentStep(user ? 'repository' : 'auth');
   };
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col">
@@ -55,7 +57,7 @@ function AppContent() {
       
       <main className="container mx-auto px-4 py-8 flex-1">
         {currentStep === 'auth' && (
-          <AuthSection />
+          <AuthSection onRepositorySelect={handleRepositorySelect} />
         )}
         
         {currentStep === 'repository' && user && (
@@ -63,13 +65,14 @@ function AppContent() {
             onRepositorySelect={handleRepositorySelect}
           />
         )}
-        
+
         {currentStep === 'generate' && selectedRepository && (
           <ReadmeGenerator 
             repository={selectedRepository}
             onBack={handleBackToRepos}
           />
         )}
+        
       </main>
       
       <Footer />

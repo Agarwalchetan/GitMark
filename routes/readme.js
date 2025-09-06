@@ -69,4 +69,41 @@ router.post('/save', requireAuth, async (req, res) => {
   }
 });
 
+// PUBLIC README GENERATION (no authentication required)
+
+// Generate README for a public repository
+router.post('/generate/public', async (req, res) => {
+  try {
+    const { owner, repo, sections, customInstructions } = req.body;
+    
+    if (!owner || !repo) {
+      return res.status(400).json({ error: 'Repository owner and name are required' });
+    }
+
+    // Gather public repository information
+    const repositoryData = await GitHubService.gatherPublicRepositoryData(owner, repo);
+    
+    // Generate README content
+    const readmeContent = await ReadmeService.generateReadme(
+      repositoryData,
+      sections,
+      customInstructions
+    );
+    
+    res.json({ content: readmeContent });
+  } catch (error) {
+    console.error('Public README generation error:', error.message);
+    
+    if (error.status === 404) {
+      return res.status(404).json({ error: 'Repository not found or is private' });
+    }
+    
+    if (error.message.includes('API key')) {
+      return res.status(500).json({ error: 'AI service configuration error' });
+    }
+    
+    res.status(500).json({ error: 'Failed to generate README' });
+  }
+});
+
 export default router;

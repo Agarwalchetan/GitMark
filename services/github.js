@@ -77,11 +77,17 @@ export class GitHubService {
   }
   
   static async getRepositoryDetails(token, owner, repo) {
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json'
+    };
+    
+    // Add authorization header only if token is provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
+      headers
     });
     
     if (!response.ok) {
@@ -92,14 +98,25 @@ export class GitHubService {
     
     return response.json();
   }
+
+  // Public repository access without authentication
+  static async getPublicRepositoryDetails(owner, repo) {
+    return this.getRepositoryDetails(null, owner, repo);
+  }
   
   static async getRepositoryStructure(token, owner, repo) {
     try {
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json'
+      };
+      
+      // Add authorization header only if token is provided
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
+        headers
       });
       
       if (!response.ok) {
@@ -113,14 +130,25 @@ export class GitHubService {
       return [];
     }
   }
+
+  // Public repository structure access without authentication
+  static async getPublicRepositoryStructure(owner, repo) {
+    return this.getRepositoryStructure(null, owner, repo);
+  }
   
   static async getFileContent(token, owner, repo, path) {
     try {
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json'
+      };
+      
+      // Add authorization header only if token is provided
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
+        headers
       });
       
       if (!response.ok) {
@@ -138,6 +166,11 @@ export class GitHubService {
       console.error(`Error fetching file ${path}:`, error.message);
       return null;
     }
+  }
+
+  // Public file content access without authentication
+  static async getPublicFileContent(owner, repo, path) {
+    return this.getFileContent(null, owner, repo, path);
   }
   
   static async gatherRepositoryData(token, owner, repo) {
@@ -179,6 +212,11 @@ export class GitHubService {
       console.error('Error gathering repository data:', error.message);
       throw error;
     }
+  }
+
+  // Public repository data gathering without authentication
+  static async gatherPublicRepositoryData(owner, repo) {
+    return this.gatherRepositoryData(null, owner, repo);
   }
   
   static async saveReadmeFile(token, owner, repo, content, message) {

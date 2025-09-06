@@ -5,6 +5,7 @@ import { LoadingSpinner } from '../UI/LoadingSpinner';
 import { ErrorMessage } from '../UI/ErrorMessage';
 import { Modal } from '../UI/Modal';
 import { ReadmePreview } from '../UI/ReadmePreview';
+import { useAuth } from '../../hooks/useAuth';
 
 interface Repository {
   id: number;
@@ -32,6 +33,7 @@ const DEFAULT_SECTIONS = [
 ];
 
 export const ReadmeGenerator: React.FC<ReadmeGeneratorProps> = ({ repository, onBack }) => {
+  const { user } = useAuth();
   const [sections, setSections] = useState(DEFAULT_SECTIONS);
   const [customInstructions, setCustomInstructions] = useState('');
   const [generatedContent, setGeneratedContent] = useState('');
@@ -40,6 +42,9 @@ export const ReadmeGenerator: React.FC<ReadmeGeneratorProps> = ({ repository, on
   const [error, setError] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [saveMessage, setSaveMessage] = useState('Generated comprehensive README.md');
+  
+  // Check if user is authenticated
+  const isAuthenticated = !!user;
 
   const handleSectionToggle = (sectionId: string) => {
     setSections(sections.map(section =>
@@ -58,12 +63,20 @@ export const ReadmeGenerator: React.FC<ReadmeGeneratorProps> = ({ repository, on
         .filter(section => section.checked)
         .map(section => section.id);
       
-      const result = await readmeService.generateReadme(
-        repository.owner.login,
-        repository.name,
-        selectedSections,
-        customInstructions
-      );
+      // Use appropriate service method based on authentication status
+      const result = isAuthenticated 
+        ? await readmeService.generateReadme(
+            repository.owner.login,
+            repository.name,
+            selectedSections,
+            customInstructions
+          )
+        : await readmeService.generatePublicReadme(
+            repository.owner.login,
+            repository.name,
+            selectedSections,
+            customInstructions
+          );
       
       setGeneratedContent(result.content);
       setShowPreviewModal(true);
@@ -192,26 +205,42 @@ export const ReadmeGenerator: React.FC<ReadmeGeneratorProps> = ({ repository, on
           />
           
           <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex-1 max-w-md">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Commit Message
-              </label>
-              <input
-                type="text"
-                value={saveMessage}
-                onChange={(e) => setSaveMessage(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="ml-4 flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors shadow-lg"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Saving...' : 'Save to Repository'}</span>
-            </button>
+            {isAuthenticated ? (
+              <>
+                <div className="flex-1 max-w-md">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Commit Message
+                  </label>
+                  <input
+                    type="text"
+                    value={saveMessage}
+                    onChange={(e) => setSaveMessage(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="ml-4 flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors shadow-lg"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Saving...' : 'Save to Repository'}</span>
+                </button>
+              </>
+            ) : (
+              <div className="w-full text-center">
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                  Sign in with GitHub to save README files directly to your repositories
+                </p>
+                <button
+                  onClick={() => navigator.clipboard.writeText(generatedContent)}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
+                >
+                  Copy to Clipboard
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </Modal>

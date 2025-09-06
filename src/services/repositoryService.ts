@@ -29,5 +29,32 @@ export const repositoryService = {
     }
     
     return response.json();
+  },
+
+  // Public repository methods (no authentication required)
+  async getPublicRepositoryDetails(owner: string, repo: string) {
+    const response = await fetch(`${API_BASE_URL}/repository/public/${owner}/${repo}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Repository not found or is private');
+      }
+      throw new Error('Failed to fetch repository details');
+    }
+    
+    return response.json();
+  },
+
+  async getPublicRepositoryData(owner: string, repo: string) {
+    const response = await fetch(`${API_BASE_URL}/repository/public/${owner}/${repo}/data`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Repository not found or is private');
+      }
+      throw new Error('Failed to fetch repository data');
+    }
+    
+    return response.json();
   }
 };
