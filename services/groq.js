@@ -1,50 +1,53 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GroqService } from './groq.js';
+import Groq from 'groq-sdk';
 
-export class GeminiService {
-  static genAI = null;
+export class GroqService {
+  static groq = null;
   
-  static getGeminiClient() {
-    if (!this.genAI) {
-      if (!process.env.GEMINI_API_KEY) {
-        throw new Error('GEMINI_API_KEY environment variable is not set');
+  static getGroqClient() {
+    if (!this.groq) {
+      if (!process.env.GROQ_API_KEY) {
+        throw new Error('GROQ_API_KEY environment variable is not set');
       }
-      this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      this.groq = new Groq({
+        apiKey: process.env.GROQ_API_KEY,
+      });
     }
-    return this.genAI;
+    return this.groq;
   }
   
   static async generateText(prompt) {
     try {
-      const modelName = process.env.GEMINI_MODEL || "gemini-pro";
-      const geminiClient = this.getGeminiClient();
-      const model = geminiClient.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error) {
-      console.error('Gemini API error:', error.message);
+      const modelName = process.env.GROQ_MODEL || "llama3-8b-8192";
       
-      // Fallback to Groq API if Gemini fails
-      try {
-        console.log('Falling back to Groq API...');
-        return await GroqService.generateText(prompt);
-      } catch (groqError) {
-        console.error('Groq API fallback error:', groqError.message);
-        // If Groq also fails, just return the original Gemini error
-        throw error;
-      }
+      const groqClient = this.getGroqClient();
+      const completion = await groqClient.chat.completions.create({
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        model: modelName,
+        temperature: 0.7,
+        max_tokens: 2048,
+        top_p: 1,
+        stream: false,
+      });
+
+      return completion.choices[0]?.message?.content || '';
+    } catch (error) {
+      console.error('Groq API error:', error.message);
+      throw new Error('Groq AI content generation failed');
     }
   }
   
   static async generateReadmeSection(sectionType, repositoryData, customInstructions = '') {
-    try {
-      const { repository, structure, files } = repositoryData;
-      
-      // Analyze repository to determine technology stack
-      const techStack = this.analyzeTechStack(structure, files);
-      
-      const prompts = {
+    const { repository, structure, files } = repositoryData;
+    
+    // Analyze repository to determine technology stack
+    const techStack = this.analyzeTechStack(structure, files);
+    
+    const prompts = {
       title: `Generate a compelling project title for: ${repository.name}`,
       
       description: `Create a comprehensive project description for a ${techStack} project named "${repository.name}". 
@@ -89,20 +92,7 @@ export class GeminiService {
       throw new Error(`Invalid section type: ${sectionType}`);
     }
     
-      return this.generateText(prompt);
-    } catch (error) {
-      console.error('Gemini README section generation error:', error.message);
-      
-      // Fallback to Groq API if Gemini fails
-      try {
-        console.log('Falling back to Groq API for README section generation...');
-        return await GroqService.generateReadmeSection(sectionType, repositoryData, customInstructions);
-      } catch (groqError) {
-        console.error('Groq README section fallback error:', groqError.message);
-        // If Groq also fails, just return the original Gemini error
-        throw error;
-      }
-    }
+    return this.generateText(prompt);
   }
   
   static analyzeTechStack(structure, files) {
