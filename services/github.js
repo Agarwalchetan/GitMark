@@ -2,9 +2,13 @@ import fetch from 'node-fetch';
 
 export class GitHubService {
   static getAuthorizationUrl(state) {
+    // Use the correct backend URL for redirect URI
+    const backendUrl = process.env.BACKEND_URL || 
+      (process.env.NODE_ENV === 'production' ? 'https://gitmark.onrender.com' : 'http://localhost:3001');
+    
     const params = new URLSearchParams({
       client_id: process.env.GITHUB_CLIENT_ID,
-      redirect_uri: `${process.env.BACKEND_URL}/api/auth/github/callback`,
+      redirect_uri: `${backendUrl}/api/auth/github/callback`,
       scope: 'repo,user:email',
       state: state
     });
