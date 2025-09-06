@@ -8,10 +8,28 @@ const router = express.Router();
 router.get('/github', (req, res) => {
   try {
     const state = generateRandomString(32);
+    
+    // Store state in session
     req.session.oauthState = state;
     
-    const githubAuthUrl = GitHubService.getAuthorizationUrl(state);
-    res.redirect(githubAuthUrl);
+    // Also store state in a secure cookie as backup
+    res.cookie('oauth_state', state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000, // 10 minutes
+      signed: true
+    });
+    
+    // Force session save before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error during OAuth initiation:', err);
+      }
+      
+      const githubAuthUrl = GitHubService.getAuthorizationUrl(state);
+      res.redirect(githubAuthUrl);
+    });
   } catch (error) {
     console.error('GitHub OAuth initiation error:', error.message);
     res.status(500).json({ error: 'Failed to initiate GitHub OAuth' });
@@ -23,10 +41,42 @@ router.get('/github/callback', async (req, res) => {
   try {
     const { code, state } = req.query;
     
-    // Verify state parameter
-    if (!state || state !== req.session.oauthState) {
-      return res.status(400).json({ error: 'Invalid state parameter' });
+    // Debug logging for production
+    console.log('OAuth callback - Received state:', state);
+    console.log('OAuth callback - Session state:', req.session.oauthState);
+    console.log('OAuth callback - Session ID:', req.sessionID);
+    
+    // Verify state parameter - check both session and signed cookie
+    const sessionState = req.session.oauthState;
+    const cookieState = req.signedCookies.oauth_state;
+    
+    if (!state) {
+      return res.status(400).json({ error: 'State parameter missing' });
     }
+    
+    // Check if state matches either session or cookie
+    const isValidState = (state === sessionState) || (state === cookieState);
+    
+    if (!isValidState) {
+      console.error('State mismatch:', { 
+        received: state, 
+        sessionState, 
+        cookieState,
+        sessionId: req.sessionID 
+      });
+      return res.status(400).json({ 
+        error: 'Invalid state parameter',
+        debug: process.env.NODE_ENV === 'development' ? {
+          received: state,
+          sessionState,
+          cookieState,
+          sessionId: req.sessionID
+        } : undefined
+      });
+    }
+    
+    // Clear the state cookie after successful validation
+    res.clearCookie('oauth_state');
     
     if (!code) {
       return res.status(400).json({ error: 'Authorization code not provided' });

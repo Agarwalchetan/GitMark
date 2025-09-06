@@ -36,21 +36,22 @@ app.use(limiter);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(cookieParser(process.env.SESSION_SECRET || 'fallback-secret-key'));
 
 // Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret-key',
   resave: false,
-  saveUninitialized: false,
-  name: 'gitmark.sid', // Custom session name
+  saveUninitialized: true, // Changed to true for OAuth flow
+  name: 'gitmark.sid',
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    httpOnly: true, // Prevent XSS attacks
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Cross-site compatibility
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours (shorter for OAuth)
+    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax', // Changed from 'none' to 'lax'
+    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Set domain for production
   },
-  rolling: true // Reset expiry on each request
+  rolling: false // Disable rolling for OAuth state persistence
 }));
 
 // Routes
