@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "client": "vite",
-    "server": "nodemon server.js",
+    "server:dev": "nodemon server.js",
+    "server": "node server.js",
     "build": "vite build && npm run build:server",
     "build:server": "echo 'Server build complete'",
     "start": "node server.js",
