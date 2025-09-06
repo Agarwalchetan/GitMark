@@ -1,4 +1,5 @@
 import Groq from 'groq-sdk';
+import { CodeAnalyzer } from './codeAnalyzer.js';
 
 export class GroqService {
   static groq = null;
@@ -44,47 +45,100 @@ export class GroqService {
   static async generateReadmeSection(sectionType, repositoryData, customInstructions = '') {
     const { repository, structure, files } = repositoryData;
     
-    // Analyze repository to determine technology stack
-    const techStack = this.analyzeTechStack(structure, files);
+    // Enhanced repository analysis
+    const analysis = CodeAnalyzer.analyzeRepository(repository, structure, files);
     
     const prompts = {
-      title: `Generate a compelling project title for: ${repository.name}`,
+      title: `Generate a simple, clear project title for: ${repository.name}. Make it descriptive but not overly technical.`,
       
-      description: `Create a comprehensive project description for a ${techStack} project named "${repository.name}". 
-                   Repository description: "${repository.description || 'No description provided'}".
-                   Include the project's purpose, key features, and value proposition. Make it engaging and informative.
-                   ${customInstructions}`,
+      description: `Create a simple, beginner-friendly description for this ${analysis.projectType} called "${repository.name}".
+
+Project Details:
+- Type: ${analysis.projectType}
+- Main Features: ${analysis.mainFeatures.join(', ')}
+- Tech Stack: ${analysis.techStack.join(', ')}
+- Complexity: ${analysis.complexity}
+
+Original Description: "${repository.description || 'No description provided'}"
+
+Write in plain English that anyone can understand. Focus on:
+- What the project does (in simple terms)
+- Who would use it
+- Why it's useful
+- Key features (max 3-4 bullet points)
+
+Avoid technical jargon. Use everyday language. ${customInstructions}`,
       
-      installation: `Generate detailed installation instructions for a ${techStack} project.
-                    Analyze the following files to determine dependencies and setup requirements:
-                    ${JSON.stringify(files, null, 2)}
-                    Include prerequisites, step-by-step installation, and common troubleshooting tips.
-                    ${customInstructions}`,
+      installation: `Create simple, step-by-step installation instructions for this ${analysis.projectType}.
+
+System Requirements: ${analysis.dependencies.system.join(', ')}
+Main Dependencies: ${analysis.dependencies.runtime.slice(0, 5).join(', ')}
+Available Scripts: ${Object.keys(analysis.scripts).join(', ')}
+
+Write instructions that a beginner can follow:
+1. Use numbered steps
+2. Include system requirements first
+3. Provide exact commands to copy-paste
+4. Add troubleshooting for common issues
+5. Keep explanations simple and clear
+
+Format as a beginner-friendly guide. ${customInstructions}`,
       
-      usage: `Create comprehensive usage examples for a ${techStack} project named "${repository.name}".
-              Based on the project structure and files, provide:
-              - Basic usage examples
-              - Common use cases
-              - Code snippets where applicable
-              - Configuration options
-              Repository structure: ${JSON.stringify(structure.slice(0, 20), null, 2)}
-              ${customInstructions}`,
+      usage: `Create easy-to-follow usage examples for "${repository.name}" (${analysis.projectType}).
+
+Entry Points: ${analysis.entryPoints.join(', ')}
+Available Scripts: ${JSON.stringify(analysis.scripts, null, 2)}
+Main Features: ${analysis.mainFeatures.join(', ')}
+
+Write usage instructions that are:
+- Simple and clear
+- Include copy-paste examples
+- Show the most common use cases first
+- Use real examples, not placeholders
+- Explain what each command does
+
+Focus on getting users started quickly. ${customInstructions}`,
       
-      api: `Generate API documentation for a ${techStack} project.
-            Analyze the codebase structure to identify API endpoints, functions, or modules:
-            ${JSON.stringify(structure.slice(0, 30), null, 2)}
-            Include endpoints, parameters, response formats, and examples.
-            ${customInstructions}`,
+      api: `Generate simple API documentation for this ${analysis.projectType}.
+
+Based on the project structure and features: ${analysis.mainFeatures.join(', ')}
+Entry points: ${analysis.entryPoints.join(', ')}
+
+Create documentation that:
+- Lists main endpoints/functions in simple terms
+- Shows example requests/responses
+- Uses clear, non-technical language
+- Includes practical examples
+- Focuses on the most important APIs only
+
+Keep it beginner-friendly. ${customInstructions}`,
       
-      contributing: `Create contributing guidelines for a ${techStack} open-source project.
-                     Include development setup, code style guidelines, pull request process, and community standards.
-                     Make it welcoming to new contributors.
-                     ${customInstructions}`,
+      contributing: `Create welcoming contribution guidelines for this ${analysis.projectType}.
+
+Project Complexity: ${analysis.complexity}
+Tech Stack: ${analysis.techStack.join(', ')}
+
+Write guidelines that:
+- Welcome newcomers warmly
+- Explain the setup process simply
+- List ways people can help (not just coding)
+- Use encouraging, friendly language
+- Include beginner-friendly tasks
+- Make it feel approachable
+
+Focus on building a welcoming community. ${customInstructions}`,
       
-      license: `Generate a license section for the project. 
-                Repository license: ${repository.license?.name || 'No license specified'}.
-                Include license information and usage rights.
-                ${customInstructions}`
+      license: `Generate a simple license section for this project.
+
+License: ${repository.license?.name || 'No license specified'}
+
+Explain in plain English:
+- What license is used
+- What people can/cannot do
+- Keep it simple and clear
+- Avoid legal jargon
+
+${customInstructions}`
     };
     
     const prompt = prompts[sectionType];
