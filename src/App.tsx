@@ -1,0 +1,84 @@
+import React, { useState, useEffect } from 'react';
+import { AuthProvider } from './context/AuthContext';
+import { Header } from './components/Layout/Header';
+import { AuthSection } from './components/Auth/AuthSection';
+import { CallbackHandler } from './components/Auth/CallbackHandler';
+import { RepositorySelector } from './components/Repository/RepositorySelector';
+import { ReadmeGenerator } from './components/Generator/ReadmeGenerator';
+import { LoadingSpinner } from './components/UI/LoadingSpinner';
+import { useAuth } from './hooks/useAuth';
+
+function AppContent() {
+  const { user, loading } = useAuth();
+  const [selectedRepository, setSelectedRepository] = useState(null);
+  const [currentStep, setCurrentStep] = useState('auth');
+  
+  // Check if this is an OAuth callback
+  const isCallback = window.location.search.includes('code=') || window.location.search.includes('error=');
+
+  if (isCallback) {
+    return <CallbackHandler />;
+  }
+
+  useEffect(() => {
+    if (user && currentStep === 'auth') {
+      setCurrentStep('repository');
+    } else if (!user && currentStep !== 'auth') {
+      setCurrentStep('auth');
+      setSelectedRepository(null);
+    }
+  }, [user, currentStep]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <LoadingSpinner message="Initializing application..." />
+      </div>
+    );
+  }
+
+  const handleRepositorySelect = (repo) => {
+    setSelectedRepository(repo);
+    setCurrentStep('generate');
+  };
+
+  const handleBackToRepos = () => {
+    setSelectedRepository(null);
+    setCurrentStep('repository');
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900">
+      <Header />
+      
+      <main className="container mx-auto px-4 py-8">
+        {currentStep === 'auth' && (
+          <AuthSection />
+        )}
+        
+        {currentStep === 'repository' && user && (
+          <RepositorySelector 
+            onRepositorySelect={handleRepositorySelect}
+          />
+        )}
+        
+        {currentStep === 'generate' && selectedRepository && (
+          <ReadmeGenerator 
+            repository={selectedRepository}
+            onBack={handleBackToRepos}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+export default App;
