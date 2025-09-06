@@ -1,4 +1,15 @@
-const API_BASE_URL = `${process.env.BACKEND_URL}/api`;
+// Use the correct backend URL based on environment
+const getBackendUrl = () => {
+  if (typeof window !== 'undefined') {
+    // In browser, use current origin for production or localhost for development
+    return window.location.origin === 'https://gitmark.onrender.com' 
+      ? 'https://gitmark.onrender.com'
+      : 'http://localhost:3001';
+  }
+  return 'http://localhost:3001';
+};
+
+const API_BASE_URL = `${getBackendUrl()}/api`;
 
 export const authService = {
   async initiateGitHubAuth() {
