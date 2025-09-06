@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Header } from './components/Layout/Header';
+import { Footer } from './components/Layout/Footer';
 import { AuthSection } from './components/Auth/AuthSection';
 import { CallbackHandler } from './components/Auth/CallbackHandler';
 import { RepositorySelector } from './components/Repository/RepositorySelector';
@@ -48,10 +50,10 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col">
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-1">
         {currentStep === 'auth' && (
           <AuthSection />
         )}
@@ -69,15 +71,19 @@ function AppContent() {
           />
         )}
       </main>
+      
+      <Footer />
     </div>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

@@ -1,15 +1,17 @@
-# Advanced README Generator
+# GitMark - AI-Powered README Generator
 
-A comprehensive, AI-powered README generator that supports both public and private GitHub repositories with secure OAuth authentication.
+A comprehensive, AI-powered README generator that supports both public and private GitHub repositories. Generate professional documentation with the power of AI.
 
 ## Features
 
-- **GitHub OAuth Integration**: Secure authentication to access both public and private repositories
+- **Dual Repository Support**: Works with both public repositories (no auth required) and private repositories (OAuth)
+- **Beautiful UI/UX**: Modern design with light/dark theme toggle and responsive layout
 - **AI-Powered Content**: Uses Google Gemini API to generate contextually relevant README content
 - **Repository Analysis**: Automatically analyzes codebase structure and dependencies
 - **Customizable Sections**: Choose which sections to include in your README
-- **Live Preview**: Edit and preview generated content before saving
+- **Enhanced Preview**: Full-screen modal preview with markdown rendering and editing capabilities
 - **Direct Save**: Save generated READMEs directly to your GitHub repository
+- **Project Stats Integration**: Display GitHub stars and forks for the project
 
 ## Setup Instructions
 
@@ -28,8 +30,8 @@ A comprehensive, AI-powered README generator that supports both public and priva
    - Go to GitHub Settings > Developer settings > OAuth Apps
    - Create a new OAuth App with:
      - Application name: "README Generator"
-     - Homepage URL: `http://localhost:5173`
-     - Authorization callback URL: `http://localhost:5173/auth/callback`
+     - Homepage URL: `http://localhost:5173` 
+     - Authorization callback URL: `http://localhost:3001/api/auth/github/callback`
 
 4. **Get Google Gemini API Key**:
    - Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
@@ -46,6 +48,7 @@ A comprehensive, AI-powered README generator that supports both public and priva
    GITHUB_CLIENT_SECRET=your_github_client_secret
    GEMINI_API_KEY=your_gemini_api_key
    SESSION_SECRET=your_random_session_secret
+   GITHUB_REPO=username/gitmark
    ```
 
 6. **Start the application**:
@@ -65,12 +68,15 @@ The application will be available at `http://localhost:5173`.
 
 ## Architecture
 
-- **Backend**: Express.js with modular route structure
+- **Backend**: Express.js with modular route structure and middleware
 - **Authentication**: GitHub OAuth with secure session management
 - **AI Integration**: Google Gemini API for content generation
 - **Frontend**: React with TypeScript for type safety
-- **Styling**: Tailwind CSS for responsive design
+- **Styling**: Tailwind CSS with dark/light theme support
+- **UI Components**: Custom modal system and enhanced preview functionality
 
+## Development
 ## License
 
+Development by **Chetan Agarwal**
 MIT License - see LICENSE file for details.

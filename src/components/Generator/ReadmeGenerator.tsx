@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Download, Save, Eye, Settings } from 'lucide-react';
+import { ArrowLeft, Save, Settings, Sparkles } from 'lucide-react';
 import { readmeService } from '../../services/readmeService';
 import { LoadingSpinner } from '../UI/LoadingSpinner';
 import { ErrorMessage } from '../UI/ErrorMessage';
+import { Modal } from '../UI/Modal';
+import { ReadmePreview } from '../UI/ReadmePreview';
 
 interface Repository {
   id: number;
@@ -36,7 +38,7 @@ export const ReadmeGenerator: React.FC<ReadmeGeneratorProps> = ({ repository, on
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [saveMessage, setSaveMessage] = useState('Generated comprehensive README.md');
 
   const handleSectionToggle = (sectionId: string) => {
@@ -64,7 +66,7 @@ export const ReadmeGenerator: React.FC<ReadmeGeneratorProps> = ({ repository, on
       );
       
       setGeneratedContent(result.content);
-      setShowPreview(true);
+      setShowPreviewModal(true);
     } catch (err: any) {
       setError(err.message || 'Failed to generate README');
     } finally {
@@ -92,17 +94,6 @@ export const ReadmeGenerator: React.FC<ReadmeGeneratorProps> = ({ repository, on
     }
   };
 
-  const downloadReadme = () => {
-    const blob = new Blob([generatedContent], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'README.md';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -116,145 +107,114 @@ export const ReadmeGenerator: React.FC<ReadmeGeneratorProps> = ({ repository, on
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-2xl font-bold text-white">{repository.name}</h2>
-            <p className="text-gray-400">{repository.description || 'Generate README for this repository'}</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{repository.name}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{repository.description || 'Generate README for this repository'}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="max-w-2xl mx-auto">
         {/* Configuration Panel */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg">
+          <div className="flex items-center space-x-2 mb-6">
+            <Settings className="w-5 h-5 text-blue-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Configuration</h3>
+          </div>
+          
+          {/* Section Selection */}
+          <div className="mb-6">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Sections to Include</h4>
+            <div className="grid grid-cols-2 gap-3">
+              {sections.map(section => (
+                <label key={section.id} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={section.checked}
+                    onChange={() => handleSectionToggle(section.id)}
+                    className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300 text-sm">{section.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Instructions */}
+          <div className="mb-6">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Custom Instructions</h4>
+            <textarea
+              value={customInstructions}
+              onChange={(e) => setCustomInstructions(e.target.value)}
+              placeholder="Add any specific requirements or information you'd like to include in the README..."
+              className="w-full h-24 px-4 py-3 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+          
+          {/* Generate Button */}
+          <button
+            onClick={handleGenerate}
+            disabled={isGenerating || sections.filter(s => s.checked).length === 0}
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
+          >
+            {isGenerating ? (
+              <>
+                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                <span>Generating README...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                <span>Generate README</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mt-6">
+            <ErrorMessage message={error} onRetry={handleGenerate} />
+          </div>
+        )}
+      </div>
+
+      {/* Preview Modal */}
+      <Modal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        title="README Preview"
+        size="full"
+      >
         <div className="space-y-6">
-          <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-            <div className="flex items-center space-x-2 mb-4">
-              <Settings className="w-5 h-5 text-blue-400" />
-              <h3 className="text-lg font-semibold text-white">Configuration</h3>
-            </div>
-            
-            {/* Section Selection */}
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-300 mb-3">Sections to Include</h4>
-              <div className="space-y-2">
-                {sections.map(section => (
-                  <label key={section.id} className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={section.checked}
-                      onChange={() => handleSectionToggle(section.id)}
-                      className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-gray-300">{section.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            
-            {/* Custom Instructions */}
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-300 mb-3">Custom Instructions</h4>
-              <textarea
-                value={customInstructions}
-                onChange={(e) => setCustomInstructions(e.target.value)}
-                placeholder="Add any specific requirements or information you'd like to include in the README..."
-                className="w-full h-24 px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+          <ReadmePreview
+            content={generatedContent}
+            onContentChange={setGeneratedContent}
+          />
+          
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex-1 max-w-md">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Commit Message
+              </label>
+              <input
+                type="text"
+                value={saveMessage}
+                onChange={(e) => setSaveMessage(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             
-            {/* Generate Button */}
             <button
-              onClick={handleGenerate}
-              disabled={isGenerating || sections.filter(s => s.checked).length === 0}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="ml-4 flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors shadow-lg"
             >
-              {isGenerating ? (
-                <>
-                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                  <span>Generating README...</span>
-                </>
-              ) : (
-                <span>Generate README</span>
-              )}
+              <Save className="w-4 h-4" />
+              <span>{isSaving ? 'Saving...' : 'Save to Repository'}</span>
             </button>
           </div>
         </div>
-
-        {/* Preview Panel */}
-        <div className="space-y-6">
-          {error && (
-            <ErrorMessage message={error} onRetry={handleGenerate} />
-          )}
-          
-          {generatedContent && (
-            <div className="bg-gray-800 rounded-xl border border-gray-700">
-              <div className="flex items-center justify-between p-4 border-b border-gray-700">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => setShowPreview(!showPreview)}
-                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors ${
-                      showPreview 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>Preview</span>
-                  </button>
-                  <span className="text-gray-500">|</span>
-                  <span className="text-sm text-gray-400">README.md</span>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={downloadReadme}
-                    className="flex items-center space-x-1 px-3 py-1.5 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download</span>
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>{isSaving ? 'Saving...' : 'Save to Repo'}</span>
-                  </button>
-                </div>
-              </div>
-              
-              <div className="p-6">
-                {showPreview ? (
-                  <div className="prose prose-invert max-w-none">
-                    <pre className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900 p-4 rounded-lg overflow-x-auto">
-                      {generatedContent}
-                    </pre>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <textarea
-                      value={generatedContent}
-                      onChange={(e) => setGeneratedContent(e.target.value)}
-                      className="w-full h-96 px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono text-sm resize-none"
-                    />
-                    
-                    <div className="flex items-center space-x-4">
-                      <div className="flex-1">
-                        <label className="block text-xs text-gray-400 mb-1">Commit Message</label>
-                        <input
-                          type="text"
-                          value={saveMessage}
-                          onChange={(e) => setSaveMessage(e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:outline-none focus:border-blue-500 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      </Modal>
     </div>
   );
 };

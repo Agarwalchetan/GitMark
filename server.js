@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import repositoryRoutes from './routes/repository.js';
 import readmeRoutes from './routes/readme.js';
+import githubRoutes from './routes/github.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -52,6 +53,7 @@ app.use(session({
 app.use('/api/auth', authRoutes);
 app.use('/api/repository', repositoryRoutes);
 app.use('/api/readme', readmeRoutes);
+app.use('/api/github', githubRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
