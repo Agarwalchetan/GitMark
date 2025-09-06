@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { GitHubService } from '../services/github.js';
 import { generateRandomString } from '../utils/security.js';
 
@@ -9,10 +10,7 @@ router.get('/github', (req, res) => {
   try {
     const state = generateRandomString(32);
     
-    // Store state in session
-    req.session.oauthState = state;
-    
-    // Also store state in a secure cookie as backup
+    // Store state in a secure cookie only (no session dependency)
     res.cookie('oauth_state', state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -21,15 +19,9 @@ router.get('/github', (req, res) => {
       signed: true
     });
     
-    // Force session save before redirect
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error during OAuth initiation:', err);
-      }
-      
-      const githubAuthUrl = GitHubService.getAuthorizationUrl(state);
-      res.redirect(githubAuthUrl);
-    });
+    console.log('OAuth initiated with state:', state);
+    const githubAuthUrl = GitHubService.getAuthorizationUrl(state);
+    res.redirect(githubAuthUrl);
   } catch (error) {
     console.error('GitHub OAuth initiation error:', error.message);
     res.status(500).json({ error: 'Failed to initiate GitHub OAuth' });
@@ -41,36 +33,26 @@ router.get('/github/callback', async (req, res) => {
   try {
     const { code, state } = req.query;
     
-    // Debug logging for production
-    console.log('OAuth callback - Received state:', state);
-    console.log('OAuth callback - Session state:', req.session.oauthState);
-    console.log('OAuth callback - Session ID:', req.sessionID);
-    
-    // Verify state parameter - check both session and signed cookie
-    const sessionState = req.session.oauthState;
+    // Verify state parameter using signed cookie only
     const cookieState = req.signedCookies.oauth_state;
+    
+    console.log('OAuth callback - Received state:', state);
+    console.log('OAuth callback - Cookie state:', cookieState);
     
     if (!state) {
       return res.status(400).json({ error: 'State parameter missing' });
     }
     
-    // Check if state matches either session or cookie
-    const isValidState = (state === sessionState) || (state === cookieState);
-    
-    if (!isValidState) {
+    if (!cookieState || state !== cookieState) {
       console.error('State mismatch:', { 
         received: state, 
-        sessionState, 
-        cookieState,
-        sessionId: req.sessionID 
+        cookieState
       });
       return res.status(400).json({ 
         error: 'Invalid state parameter',
         debug: process.env.NODE_ENV === 'development' ? {
           received: state,
-          sessionState,
-          cookieState,
-          sessionId: req.sessionID
+          cookieState
         } : undefined
       });
     }
@@ -92,8 +74,8 @@ router.get('/github/callback', async (req, res) => {
     // Get user information
     const userInfo = await GitHubService.getUserInfo(tokenData.access_token);
     
-    // Store user session data (NOT the token)
-    req.session.user = {
+    // Create user data object
+    const userData = {
       id: userInfo.id,
       login: userInfo.login,
       name: userInfo.name,
@@ -102,24 +84,33 @@ router.get('/github/callback', async (req, res) => {
       created_at: new Date().toISOString()
     };
     
-    // Store token securely in session
-    req.session.githubToken = tokenData.access_token;
+    // Create a simple encrypted token for stateless auth
+    const secret = process.env.SESSION_SECRET || 'fallback-secret-key';
+    const userToken = crypto.createHmac('sha256', secret)
+      .update(JSON.stringify(userData))
+      .digest('hex');
     
-    // Clean up OAuth state
-    delete req.session.oauthState;
-    
-    // Save session explicitly and wait for completion before redirect
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error:', err);
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=session_failed`);
-      }
-      
-      // Only redirect after session is successfully saved
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-      console.log('Session saved successfully, redirecting to:', `${frontendUrl}?auth=success`);
-      res.redirect(`${frontendUrl}?auth=success`);
+    // Store user data in signed cookie
+    res.cookie('user_data', JSON.stringify(userData), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      signed: true
     });
+    
+    // Store verification token
+    res.cookie('auth_token', userToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      signed: true
+    });
+    
+    console.log('User authenticated successfully:', userData.login);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}?auth=success`);
   } catch (error) {
     console.error('GitHub OAuth callback error:', error.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=auth_failed`);
@@ -128,29 +119,40 @@ router.get('/github/callback', async (req, res) => {
 
 // Get current user
 router.get('/user', (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const userData = req.signedCookies.user_data;
+    const authToken = req.signedCookies.auth_token;
+    
+    if (!userData || !authToken) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    // Verify the auth token
+    const secret = process.env.SESSION_SECRET || 'fallback-secret-key';
+    const expectedToken = crypto.createHmac('sha256', secret)
+      .update(userData)
+      .digest('hex');
+    
+    if (authToken !== expectedToken) {
+      return res.status(401).json({ error: 'Invalid authentication token' });
+    }
+    
+    const user = JSON.parse(userData);
+    res.json({ user });
+  } catch (error) {
+    console.error('User verification error:', error);
+    res.status(401).json({ error: 'Authentication verification failed' });
   }
-  
-  res.json({ user: req.session.user });
 });
 
 // Logout
 router.post('/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('Session destruction error:', err);
-      return res.status(500).json({ error: 'Logout failed' });
-    }
-    
-    // Clear the custom session cookie
-    res.clearCookie('gitmark.sid', {
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-    });
-    res.json({ message: 'Logged out successfully' });
-  });
+  // Clear authentication cookies
+  res.clearCookie('user_data');
+  res.clearCookie('auth_token');
+  res.clearCookie('gitmark.sid');
+  
+  res.json({ message: 'Logged out successfully' });
 });
 
 export default router;
