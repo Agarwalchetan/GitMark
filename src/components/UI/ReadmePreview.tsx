@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Eye, Code, Copy, Check, Download } from 'lucide-react';
 
 interface ReadmePreviewProps {

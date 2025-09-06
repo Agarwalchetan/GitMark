@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Header } from './components/Layout/Header';
@@ -39,7 +39,7 @@ function AppContent() {
     );
   }
 
-  const handleRepositorySelect = (repo) => {
+  const handleRepositorySelect = (repo: any) => {
     setSelectedRepository(repo);
     setCurrentStep('generate');
   };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Github, Shield, Zap, FileText, Globe, Lock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 

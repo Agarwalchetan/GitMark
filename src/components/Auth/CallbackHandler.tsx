@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { authService } from '../../services/authService';
 import { LoadingSpinner } from '../UI/LoadingSpinner';
 
 export const CallbackHandler: React.FC = () => {

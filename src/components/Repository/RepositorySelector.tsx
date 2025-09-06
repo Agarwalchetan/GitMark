@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Lock, Globe, GitFork, Star, Calendar } from 'lucide-react';
 import { repositoryService } from '../../services/repositoryService';
 import { LoadingSpinner } from '../UI/LoadingSpinner';
