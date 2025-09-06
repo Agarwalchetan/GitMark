@@ -16,7 +16,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3001;
 
 // Security middleware
 app.use(helmet());
@@ -69,7 +69,7 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static('dist'));
   
   // Catch all handler for SPA
-  app.get('*', (req, res) => {
+  app.get('/*', (req, res) => {
     if (!req.path.startsWith('/api/')) {
       res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
     }
